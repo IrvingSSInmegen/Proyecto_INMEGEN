@@ -103,13 +103,6 @@ COAD_StIIIandIV_biom_STN_trans <- t(COAD_StIIIandIV_biom_STN) %>% row_to_names(r
 #######            #######
 ##########################
 
-# Idea sacar la media de las columnas nos dira cual es mas abundante??
-# Si es así entonces acomodar en max- min
-# presentar un gráfica de pastel para ver cierto porcentaje
-# Vero como hacer los geom_violin()
-#  Encontrar una manera de solo gráficas los mas importantes
-#  o en su defecto gráficar el del interes propio.
-
 library(ggplot2)
 
 #  Como las muestras de tejido sólido tienen mas de 100 muestras
@@ -135,21 +128,105 @@ Media_StIIIandIV_PT <- COAD_StIIIandIV_biom_PT %>% select(-...1) %>%
                         as_tibble(rownames = "Bac_Arch") %>%
                         arrange(desc(V1))
 
-StIandII_PT_vplot <- COAD_StIandII_biom_PT %>% select(...1,k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Oceanospirillales.f__Halomonadaceae.g__Cobetia)
 
-StIandII_PT_vplot_pivot %>% StIandII_PT_vplot %>% tidyr::pivot_longer(cols = -"...1",
+
+Difference <- dplyr::left_join(x = Media_StIandII_PT,
+                                y = Media_StIIIandIV_PT,
+                                suffix = c ("_StIandII","_StIIIandIV"),
+                                by = c("Bac_Arch" = "Bac_Arch"))
+diferencia <- Difference %>% mutate(diferencias = abs(V1_StIandII - V1_StIIIandIV),
+                                    Estado = case_when(diferencias == 0 ~ "Nula",
+                                                       diferencias < .5 ~ "Baja",
+                                                       diferencias > .5 ~ "Alta"))
+Diferencia_alta <- diferencia %>% filter(Estado == "Alta")
+
+nombres <- Diferencia_alta %>% select(Bac_Arch)
+bacarchea <- as.vector(nombres)                    
+
+
+
+# Violin plots  Stage I and II
+
+StIandII_PT_vplot <- COAD_StIandII_biom_PT %>% select(...1,
+                                                      k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales.f__Pasteurellaceae.g__Gallibacterium,
+                                                      k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales.f__Pasteurellaceae.g__Aggregatibacter,
+                                                      k__Bacteria.p__Fusobacteria.c__Fusobacteriia.o__Fusobacteriales.f__Leptotrichiaceae.g__Leptotrichia,
+                                                      k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Enterobacteriales.f__Enterobacteriaceae.g__Buchnera,
+                                                      k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales.f__Comamonadaceae.g__Limnohabitans,
+                                                      k__Archaea.p__Euryarchaeota.c__Methanococci.o__Methanococcales.f__Methanococcaceae.g__Methanococcus,
+                                                      k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Ruminococcaceae.g__Faecalibacterium,
+                                                      k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rhizobiales.f__Bradyrhizobiaceae.g__Rhodopseudomonas,
+                                                      k__Bacteria.p__Cyanobacteria.o__Nostocales.f__Nostocaceae.g__Anabaena,
+                                                      k__Bacteria.p__Firmicutes.c__Bacilli.o__Bacillales.f__Listeriaceae.g__Brochothrix,
+                                                      k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales.f__Comamonadaceae.g__Pelomonas)
+                                                    
+
+StIandII_PT_vplot_pivot<-  StIandII_PT_vplot %>% tidyr::pivot_longer(cols = -"...1",
                                                                      names_to = "Bacteria",
                                                                      values_to = "Valores") %>%
                                                  select(-...1) 
 
 
 
-StIandII_PT_vplot %>% tidyr::pivot_longer(cols = -"...1",
-                                          names_to = "Bacteria",
-                                          values_to = "Valores")%>%
-                              ggplot(mapping = aes(x = "Valores",
-                                                   y = "Bacteria",
-                                                   fill = as.factor(Bacteria))) +
-                              geom_boxplot() + 
-                              facet_wrap(~as.factor(Bacteria),scales = "free")
+StIandII_PT_vplot_pivot$Bacteria <- factor(StIandII_PT_vplot_pivot$Bacteria,
+                                           labels = c("k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales.f__Pasteurellaceae.g__Gallibacterium",
+                                                      "k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales.f__Pasteurellaceae.g__Aggregatibacter",
+                                                      "k__Bacteria.p__Fusobacteria.c__Fusobacteriia.o__Fusobacteriales.f__Leptotrichiaceae.g__Leptotrichia",
+                                                      "k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Enterobacteriales.f__Enterobacteriaceae.g__Buchnera",
+                                                      "k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales.f__Comamonadaceae.g__Limnohabitans",
+                                                      "k__Archaea.p__Euryarchaeota.c__Methanococci.o__Methanococcales.f__Methanococcaceae.g__Methanococcus",
+                                                      "k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Ruminococcaceae.g__Faecalibacterium",
+                                                      "k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rhizobiales.f__Bradyrhizobiaceae.g__Rhodopseudomonas",
+                                                      "k__Bacteria.p__Cyanobacteria.o__Nostocales.f__Nostocaceae.g__Anabaena",
+                                                      "k__Bacteria.p__Firmicutes.c__Bacilli.o__Bacillales.f__Listeriaceae.g__Brochothrix",
+                                                      "k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales.f__Comamonadaceae.g__Pelomonas"))
+Ploteo_StIandII <- ggplot(StIandII_PT_vplot_pivot,aes(x = Bacteria,
+                                                      y = Valores,
+                                                      color = Bacteria)) + 
+                            geom_violin()+ 
+                            theme(legend.position = "none")
+Ploteo_StIandII
+
+# Violin plots  Stage III and IV
+
+StIIIandIV_PT_vplot <- COAD_StIIIandIV_biom_PT %>% select(...1,
+                                                      k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales.f__Pasteurellaceae.g__Gallibacterium,
+                                                      k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales.f__Pasteurellaceae.g__Aggregatibacter,
+                                                      k__Bacteria.p__Fusobacteria.c__Fusobacteriia.o__Fusobacteriales.f__Leptotrichiaceae.g__Leptotrichia,
+                                                      k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Enterobacteriales.f__Enterobacteriaceae.g__Buchnera,
+                                                      k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales.f__Comamonadaceae.g__Limnohabitans,
+                                                      k__Archaea.p__Euryarchaeota.c__Methanococci.o__Methanococcales.f__Methanococcaceae.g__Methanococcus,
+                                                      k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Ruminococcaceae.g__Faecalibacterium,
+                                                      k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rhizobiales.f__Bradyrhizobiaceae.g__Rhodopseudomonas,
+                                                      k__Bacteria.p__Cyanobacteria.o__Nostocales.f__Nostocaceae.g__Anabaena,
+                                                      k__Bacteria.p__Firmicutes.c__Bacilli.o__Bacillales.f__Listeriaceae.g__Brochothrix,
+                                                      k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales.f__Comamonadaceae.g__Pelomonas)
+
+
+StIIIandIV_PT_vplot_pivot<-  StIIIandIV_PT_vplot %>% tidyr::pivot_longer(cols = -"...1",
+                                                                     names_to = "Bacteria",
+                                                                     values_to = "Valores") %>%
+                                                     select(-...1) 
+
+
+
+StIIIandIV_PT_vplot_pivot$Bacteria <- factor(StIIIandIV_PT_vplot_pivot$Bacteria,
+                                           labels = c("k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales.f__Pasteurellaceae.g__Gallibacterium",
+                                                      "k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Pasteurellales.f__Pasteurellaceae.g__Aggregatibacter",
+                                                      "k__Bacteria.p__Fusobacteria.c__Fusobacteriia.o__Fusobacteriales.f__Leptotrichiaceae.g__Leptotrichia",
+                                                      "k__Bacteria.p__Proteobacteria.c__Gammaproteobacteria.o__Enterobacteriales.f__Enterobacteriaceae.g__Buchnera",
+                                                      "k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales.f__Comamonadaceae.g__Limnohabitans",
+                                                      "k__Archaea.p__Euryarchaeota.c__Methanococci.o__Methanococcales.f__Methanococcaceae.g__Methanococcus",
+                                                      "k__Bacteria.p__Firmicutes.c__Clostridia.o__Clostridiales.f__Ruminococcaceae.g__Faecalibacterium",
+                                                      "k__Bacteria.p__Proteobacteria.c__Alphaproteobacteria.o__Rhizobiales.f__Bradyrhizobiaceae.g__Rhodopseudomonas",
+                                                      "k__Bacteria.p__Cyanobacteria.o__Nostocales.f__Nostocaceae.g__Anabaena",
+                                                      "k__Bacteria.p__Firmicutes.c__Bacilli.o__Bacillales.f__Listeriaceae.g__Brochothrix",
+                                                      "k__Bacteria.p__Proteobacteria.c__Betaproteobacteria.o__Burkholderiales.f__Comamonadaceae.g__Pelomonas"))
+Ploteo_StIIIandIV <- ggplot(StIIIandIV_PT_vplot_pivot,aes(x = Bacteria,
+                                                          y = Valores,
+                                                          color = Bacteria)) + 
+                             geom_violin()+
+                             theme(legend.position = "none")
+Ploteo_StIIIandIV
+
 
