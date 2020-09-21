@@ -1,15 +1,9 @@
-library(dplyr)
-library(tidyr)
-library(vroom)
-library(tidyverse)
-
-
 ###############################
 #######                 #######
 #######     CODIGO      #################
 #######                 #######
 ###############################
-
+library(vroom)
 # Data
 
 metadata <- vroom::vroom(file = "Metadata-TCGA-All-18116-Samples.csv")
@@ -23,43 +17,44 @@ kraken_TCGA_matched2SHOGUN <- vroom::vroom(file = "Kraken-TCGA-Matched2SHOGUN-Ra
 kraken_TCGA_matched2SHOGUN_VoomSNM <- vroom::vroom(file = "Kraken-TCGA-Matched2SHOGUN-Voom-SNM-Quantile-Data.csv")
 
 # Filter
+COAD_metadata  <- metadata %>% filter(disease_type == "Colon Adenocarcinoma") # Individual with COAD
+                                                                              # 1017 samples 42 variables
 
-COAD_metadata  <- metadata %>% filter(disease_type == "Colon Adenocarcinoma") 
-# Individual with COAD
-# 1017 samples 42 variables
-
+# Stage Early
 COAD_metadata_StageIandII  <- metadata %>% filter(disease_type == "Colon Adenocarcinoma" & 
                                                   pathologic_stage_label %in% c("Stage I","Stage IA",
                                                                                 "Stage II","Stage IIA",
-                                                                                "Stage IIB","Stage IIC")) 
-# 576 Samples Stage I and II
+                                                                                "Stage IIB","Stage IIC")) # 576 Samples Stage I and II
+
+COAD_metadata_StageI  <- metadata %>% filter(disease_type == "Colon Adenocarcinoma" & 
+                                             pathologic_stage_label %in% c("Stage I","Stage IA")) # 180 samples only stage I ( 1 sample Stage IA)
+COAD_metadata_StageII  <- metadata %>% filter(disease_type == "Colon Adenocarcinoma" & 
+                                              pathologic_stage_label %in% c("Stage II","Stage IIA",
+                                                                            "Stage IIB","Stage IIC")) # 396  samples only stage II ( 1 sample Stage IIC)
+
+COAD_metadata_StIandII_PT <- COAD_metadata_StageIandII %>% filter(sample_type == "Primary Tumor") # 473 samples primary tumor
+COAD_metadata_StIandII_BDN <- COAD_metadata_StageIandII %>% filter(sample_type == "Blood Derived Normal") # 64 samples blood derived normal
+COAD_metadata_StIandII_STN <- COAD_metadata_StageIandII %>% filter(sample_type == "Solid Tissue Normal") # 38 samples solid tissue normal
 
 
-COAD_metadata_StIandII_PT <- COAD_metadata_StageIandII %>% filter(sample_type == "Primary Tumor")  
-# 473 samples primary tumor
-
-COAD_metadata_StIandII_BDN <- COAD_metadata_StageIandII %>% filter(sample_type == "Blood Derived Normal") 
-# 64 samples blood derived normal
-
-COAD_metadata_StIandII_STN <- COAD_metadata_StageIandII %>% filter(sample_type == "Solid Tissue Normal") 
-# 38 samples solid tissue normal
-
+# Stage Lated
 
 COAD_metadata_StageIIIandIV <- metadata %>% filter(disease_type == "Colon Adenocarcinoma" & 
                                                    pathologic_stage_label %in% c ("Stage III","Stage IIIA",
                                                                                   "Stage IIIB","Stage IIIC",
-                                                                                  "Stage IV", "Stage IVA",
-                                                                                  "Stage IVB"))
-# 423 observaciones Stage III y IV
+                                                                                  "Stage IV", "Stage IVA","Stage IVB")) # 423 observaciones Stage III y IV
 
-COAD_metadata_StIIIandIV_PT <- COAD_metadata_StageIIIandIV %>% filter(sample_type == "Primary Tumor") 
-#348 samples primary tumor
+COAD_metadata_StageIII <- metadata %>% filter(disease_type == "Colon Adenocarcinoma" & 
+                                              pathologic_stage_label %in% c ("Stage III","Stage IIIA",
+                                                                             "Stage IIIB","Stage IIIC")) # 284 samples only Stage III
+COAD_metadata_StageIV <- metadata %>% filter(disease_type == "Colon Adenocarcinoma" & 
+                                             pathologic_stage_label %in% c ("Stage IV", "Stage IVA",
+                                                                                        "Stage IVB")) # 139 sample only Stage IV
+                                                                                                      # (2 samples Stage IVB)
 
-COAD_metadata_StIIIandIV_BDN <- COAD_metadata_StageIIIandIV %>% filter(sample_type == "Blood Derived Normal") 
-# 43 samples Blood derived normal
-
-COAD_metadata_StIIIandIV_STN <- COAD_metadata_StageIIIandIV %>% filter(sample_type == "Solid Tissue Normal") 
-#32 samples solid tissue normal
+COAD_metadata_StIIIandIV_PT <- COAD_metadata_StageIIIandIV %>% filter(sample_type == "Primary Tumor") #348 samples primary tumor
+COAD_metadata_StIIIandIV_BDN <- COAD_metadata_StageIIIandIV %>% filter(sample_type == "Blood Derived Normal") # 43 samples Blood derived normal
+COAD_metadata_StIIIandIV_STN <- COAD_metadata_StageIIIandIV %>% filter(sample_type == "Solid Tissue Normal") #32 samples solid tissue normal
 
 #15 Phatologic stage label: not available
 #3  Phatologic stage label: NA
@@ -67,6 +62,7 @@ COAD_metadata_StIIIandIV_STN <- COAD_metadata_StageIIIandIV %>% filter(sample_ty
 #1  Metastatic
 
 #Filter virus in dataframe
+
 kraken_TCGA_matched2SHOGUN_VoomSNM_Novirus <- kraken_TCGA_matched2SHOGUN_VoomSNM %>% select(- contains("Viroid"))
 namecolums <- colnames(kraken_TCGA_matched2SHOGUN_VoomSNM_Novirus)
 grep(pattern = "Viroid",x = namecolums) # 0 viroids
@@ -74,35 +70,24 @@ grep(pattern = "Viroid",x = namecolums) # 0 viroids
 # Bacteria/archea Stage I and II
 COAD_StIandII_biom_PT <- dplyr::semi_join(x = kraken_TCGA_matched2SHOGUN_VoomSNM_Novirus,
                                           y = COAD_metadata_StIandII_PT,
-                                          by = c("...1" = "...1")) 
-#190 samples
-
+                                          by = c("...1" = "...1"))  #190 samples
 COAD_StIandII_biom_BDN <- dplyr::semi_join(x = kraken_TCGA_matched2SHOGUN_VoomSNM_Novirus,
                                            y = COAD_metadata_StIandII_BDN,
-                                           by = c("...1" = "...1")) 
-# 29 samples
-
+                                           by = c("...1" = "...1"))  # 29 samples
 COAD_StIandII_biom_STN <- dplyr::semi_join(x = kraken_TCGA_matched2SHOGUN_VoomSNM_Novirus,
                                            y = COAD_metadata_StIandII_STN,
-                                           by = c("...1" = "...1")) 
-#15 samples
+                                           by = c("...1" = "...1"))  #15 samples
 
 # Bacteria/archea Stage III and IV
 COAD_StIIIandIV_biom_PT <- dplyr::semi_join(x = kraken_TCGA_matched2SHOGUN_VoomSNM_Novirus,
                                             y = COAD_metadata_StIIIandIV_PT,
-                                            by = c("...1" = "...1")) 
-#150 samples
-
+                                            by = c("...1" = "...1")) #150 samples
 COAD_StIIIandIV_biom_BDN <- dplyr::semi_join(x = kraken_TCGA_matched2SHOGUN_VoomSNM_Novirus,
                                              y = COAD_metadata_StIIIandIV_BDN,
-                                             by = c("...1" = "...1")) 
-# 17 samples
-
+                                             by = c("...1" = "...1")) # 17 samples
 COAD_StIIIandIV_biom_STN <- dplyr::semi_join(x = kraken_TCGA_matched2SHOGUN_VoomSNM_Novirus,
                                              y = COAD_metadata_StIIIandIV_STN,
-                                             by = c("...1" = "...1"))
-#9 samples
-
+                                             by = c("...1" = "...1")) #9 samples
 # Matrices de conteo de abundancia
 
 # StageIandII Primary Tumor , Blood derived normal , Solid tissue normal.
@@ -139,37 +124,39 @@ COAD_metadata_StgIandII_PT_match2biom_filter <- COAD_metadata_StgIandII_PT_match
                                                                            "s13753","s13516","s13519",
                                                                            "s13716","s13040","s13509",
                                                                            "s13759","s13538","s13517",
-                                                                           "s13677","s13513"))
+                                                                           "s13677","s13513"))  # Result: 137 samples 
+
 Diccionario_STIandII_PT <- COAD_metadata_StgIandII_PT_match2biom_filter %>% select(...1,
                                                                                   case_uuid,
                                                                                   aliquot_uuid,
                                                                                   sample_uuid,
                                                                                   filename,
-                                                                                  gdc_file_uuid)
+                                                                                  gdc_file_uuid) %>% arrange(case_uuid)
 
-lapply(1:nrow(Diccionario_STIandII_PT), function(i){
+#  Matriz de genes Stage I and II
+# setwd("C:/) Necesito cambiar de directorio para cargar solo los
+# archivos de etapa temprana
+
+archivos = list.files(pattern = "*.gz")
+files <- as_tibble(archivos)
+
+mi_lista <- lapply(1:nrow(files), function(i){
   
-  mi_archivo = Diccionario_STIandII_PT[["case_uuid"]][i]
-  mi_caseid  = Diccionario_STIandII_PT[["case_uuid"]][i]
-  mi_tabla = vroom::vroom(file = mi_archivo, col_names = F)
-  mis_colnames = c("gene", mi_caseid) 
-  colnames(mi_tabla) <- mis_colnames
+              mi_archivo = files[["value"]][i]
+              mi_caseid  = Diccionario_STIandII_PT[["case_uuid"]][i]
+              mi_tabla = vroom::vroom(file = mi_archivo, col_names = F)
+              mis_colnames = c("gene", mi_caseid) 
+              colnames(mi_tabla) <- mis_colnames
   
-  return(mi_tabla)
-}) 
+            return(mi_tabla)
+            }) 
 
-# Metadata COAD Primary tumor Stage III and IV match2biom
+StageIandII_genes <- mi_lista %>% reduce(full_join, by = "gene")
 
+# Metadata COAD Primary tumor Stage III and Iv match2biom
 COAD_metadata_StgIIIandIV_PT_match2biom <- dplyr::semi_join(x = COAD_metadata_StIIIandIV_PT,
                                                             y = COAD_StIIIandIV_biom_PT,
                                                             by = c("...1" = "...1"))
-
-Diccionario_STIIIandIV_PT <- COAD_metadata_StgIIIandIV_PT_match2biom %>% select(...1,
-                                                                                case_uuid,
-                                                                                aliquot_uuid,
-                                                                                sample_uuid,
-                                                                                filename,
-                                                                                gdc_file_uuid)
 
 COAD_metadata_StgIIIandIV_PT_match2biom_filter <- COAD_metadata_StgIIIandIV_PT_match2biom %>% 
                                                        filter(!...1 %in% c("s13682","s13701","s13842",
@@ -187,13 +174,180 @@ COAD_metadata_StgIIIandIV_PT_match2biom_filter <- COAD_metadata_StgIIIandIV_PT_m
                                                                            "s13721","s13788","s12914",
                                                                            "s13657","s13525","s13237",
                                                                            "s13681","s13839","s13700",
-                                                                           "s12852"))
+                                                                           "s12852")) # 104 samples
 
+Diccionario_STIIIandIV_PT <- COAD_metadata_StgIIIandIV_PT_match2biom_filter %>% select(...1,
+                                                                                       case_uuid,
+                                                                                       aliquot_uuid,
+                                                                                       sample_uuid,
+                                                                                       filename,
+                                                                                       gdc_file_uuid) %>% arrange(case_uuid)
+
+#  Matriz de genes Stage III and IV
+# setwd("C:/) Necesito cambiar de directorio para cargar solo los
+# archivos de etapa tardía
+
+archivos.1 = list.files(pattern = "*.gz")
+files.1 <- as_tibble(archivos.1)
+
+mi_lista.1 <- lapply(1:nrow(files.1), function(i){
+  
+                mi_archivo.1 = files.1[["value"]][i]
+                mi_caseid.1  = Diccionario_STIIIandIV_PT[["case_uuid"]][i]
+                mi_tabla.1 = vroom::vroom(file = mi_archivo.1, col_names = F)
+                mis_colnames.1 = c("gene", mi_caseid.1) 
+                colnames(mi_tabla.1) <- mis_colnames.1
+  
+                return(mi_tabla.1)
+               }) 
+
+StageIIIandIV_genes <- mi_lista.1 %>% reduce(full_join, by = "gene")
+
+#  Matrices de microbioma filtradas
+#   Stage I and II
+nombres_StIandII <- Diccionario_STIandII_PT %>% select(...1,case_uuid) %>% arrange(...1)
+
+StageIandII_biom <- dplyr::full_join(x = nombres_StIandII,
+                                     y = kraken_TCGA_matched2SHOGUN_VoomSNM_Novirus,
+                                     by = c("...1" = "...1")) %>%
+                                      select(-...1)
+StageIandII_biom_filter <- dplyr:: right_join(x = StageIandII_biom,
+                                              y = nombres_StIandII,
+                                              by = c("case_uuid" = "case_uuid")) %>%
+                                              t() %>% row_to_names(row_number = 1)
+
+#  Stage III and IV
+nombres_StIIIandIV <- Diccionario_STIIIandIV_PT %>% select(...1,case_uuid) %>% arrange(...1)
+
+StageIIIandIV_biom <- dplyr::full_join(x = nombres_StIIIandIV,
+                                       y = kraken_TCGA_matched2SHOGUN_VoomSNM_Novirus,
+                                       by = c("...1" = "...1")) %>% 
+                                        select(-...1)
+StageIIIandIV_biom_filter <- dplyr::right_join(x = StageIIIandIV_biom,
+                                               y = nombres_StIIIandIV,
+                                               by = c("case_uuid" = "case_uuid")) %>%
+                                              t() %>% row_to_names(row_number = 1)
+
+#  Guardar las matrices en archivo 
+write.csv(StageIIIandIV_biom_filter, file="StageIIIandIV_bac_arch.csv")
+write.csv(StageIandII_biom_filter, file="StageIandII_bac_arch.csv")
+write.csv(StageIandII_genes, file="StageIandII_gene.csv")
+write.csv(StageIIIandIV_genes, file="StageIIIandIV_gene.csv")
+
+##########################################
+#######                            #######
+######    Differetial expression    ##################
+#######                            #######
+##########################################
+# Preparando los datos
+
+metadata_StIandII <- COAD_metadata_StgIandII_PT_match2biom_filter %>% 
+                                    select(...1,case_uuid,pathologic_stage_label)%>%
+                                         mutate(condition = case_when(pathologic_stage_label == "Stage I" ~ "early",
+                                                                      pathologic_stage_label == "Stage IA" ~ "early",
+                                                                      pathologic_stage_label == "Stage II" ~ "early",
+                                                                      pathologic_stage_label == "Stage IIA" ~ "early",
+                                                                      pathologic_stage_label == "Stage IIB" ~ "early",
+                                                                      pathologic_stage_label == "Stage IIC" ~ "early"))%>%
+                                                        select(...1,case_uuid,condition)
+
+metadata_StIIIandIV <- COAD_metadata_StgIIIandIV_PT_match2biom_filter %>%
+                                    select(...1,case_uuid,pathologic_stage_label) %>%
+                                         mutate(condition = case_when(pathologic_stage_label == "Stage III" ~ "late",
+                                                                      pathologic_stage_label == "Stage IIIA" ~ "late",
+                                                                      pathologic_stage_label == "Stage IIIB" ~ "late",
+                                                                      pathologic_stage_label == "Stage IIIC" ~ "late",
+                                                                      pathologic_stage_label == "Stage IV" ~ "late",
+                                                                      pathologic_stage_label == "Stage IVA" ~ "late",
+                                                                      pathologic_stage_label == "Stage IVB" ~ "late"))%>%
+                                                        select(...1,case_uuid,condition)
+
+metadata_COAD <- rbind(metadata_StIandII,metadata_StIIIandIV)
+Metadada_COAD <- metadata_COAD %>% select(-...1)
+
+bac_early <- metadata_COAD %>% select(...1,case_uuid)
+
+# Bacterias sin normalizar
+kraken_TCGA_matched2SHOGUN_Novirus <- kraken_TCGA_matched2SHOGUN %>% select(- contains("Viroid"))
+namecolums <- colnames(kraken_TCGA_matched2SHOGUN_Novirus)
+grep(pattern = "Viroid",x = namecolums) # 0 viroids   
+
+Bacteria_countdata <- dplyr::left_join(x = bac_early,
+                                       y = kraken_TCGA_matched2SHOGUN_Novirus,
+                                       by = c("...1" = "...1"))%>% select(-...1)%>% 
+                                   t()%>% row_to_names(row_number = 1)
+
+Bacteria_countdata.1 <- t(sapply(Bacteria_countdata, as.numeric))
+
+# La matriz de Bacteria_countdata de hace de caracteres necesito hacerla numérica
+# Solución
+
+write.csv(Metadada_COAD,file = "metadata_uuid.csv",row.names = FALSE)
+write.csv(Bacteria_countdata,file = "Countdata_Bacteria.csv")
+
+Countdata_uuid_COAD <- read.csv(file = "Countdata_Bacteria.csv",row.names = 1)%>%as.matrix()
+Metadata_uuid_COAD <- read.csv(file = "metadata_uuid.csv", row.names = 1)
+
+#Ahora si aplicamos el paquete DESeq2
+library(DESeq2)
+
+Countdata_uuid_COAD = Countdata_uuid_COAD[rowSums(Countdata_uuid_COAD)>1,] 
+
+dds = DESeqDataSetFromMatrix(countData = Countdata_uuid_COAD,
+                             colData = Metadata_uuid_COAD,
+                             design =~condition)
+dds = DESeq(dds)
+
+res = results(dds, contrast = c("condition","early","late"))
+res = res[order(res$pvalue),]
+summary(res)
+
+head(res,10)
 
 ##########################
 #######            #######
-######   GRÁFICAS   ##################
+######    GRÁFICAS    ##################
 #######            #######
+##########################
+library(igraph)
+
+# Gráficas analizadas con python
+# Early
+G_early = read.graph(file = "early_analyzed.graphml",format = c("graphml"))
+vertex_attr_names(G_early)
+V(G_early)
+list_attr_early <- get.data.frame(G_early,what = c("vertices"))
+# Quitar nodos de grado cero
+aislados_early = which(degree(G_early) == 0)
+G2_early = delete.vertices(G_early,aislados_early)
+nodos_nonulos_early <- get.data.frame(G2_early,what = c("vertices"))
+
+write.graph(G2_early,file = "early_analyzed_positive.gml",format = "gml")
+
+#Late
+G_late = read.graph(file = "late_analyzed.graphml",format = c("graphml"))
+vertex_attr_names(G_late)
+V(G_late)
+list_attr_late <- get.data.frame(G_late,what = c("vertices"))
+# Quitar nodos de grado cero
+aislados_late = which(degree(G_late) == 0)
+G2_late = delete.vertices(G_late,aislados_late)
+nodos_nonulos_late <- get.data.frame(G2_late,what = c("vertices"))
+
+write.graph(G2_late,file = "late_analized_positive.gml",format = "gml")
+
+
+
+G_early = read_graph(file = "early.graphml",format = c("graphml"))
+vertex_attr_names(G_early)
+V(G_early)
+nodos <- get.data.frame(G_early,what = c("vertices"))
+
+
+##########################
+#######                #######
+######   VIOLIN PLOTS   ##################
+#######                #######
 ##########################
 
 # Idea sacar la media de las columnas nos dira cual es mas abundante??
