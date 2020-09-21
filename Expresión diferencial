@@ -1,0 +1,69 @@
+##########################################
+#######                            #######
+######    Differetial expression    ##################
+#######                            #######
+##########################################
+# Preparando los datos
+
+metadata_StIandII <- COAD_metadata_StgIandII_PT_match2biom_filter %>% 
+                                    select(...1,case_uuid,pathologic_stage_label)%>%
+                                         mutate(condition = case_when(pathologic_stage_label == "Stage I" ~ "early",
+                                                                      pathologic_stage_label == "Stage IA" ~ "early",
+                                                                      pathologic_stage_label == "Stage II" ~ "early",
+                                                                      pathologic_stage_label == "Stage IIA" ~ "early",
+                                                                      pathologic_stage_label == "Stage IIB" ~ "early",
+                                                                      pathologic_stage_label == "Stage IIC" ~ "early"))%>%
+                                                        select(...1,case_uuid,condition)
+
+metadata_StIIIandIV <- COAD_metadata_StgIIIandIV_PT_match2biom_filter %>%
+                                    select(...1,case_uuid,pathologic_stage_label) %>%
+                                         mutate(condition = case_when(pathologic_stage_label == "Stage III" ~ "late",
+                                                                      pathologic_stage_label == "Stage IIIA" ~ "late",
+                                                                      pathologic_stage_label == "Stage IIIB" ~ "late",
+                                                                      pathologic_stage_label == "Stage IIIC" ~ "late",
+                                                                      pathologic_stage_label == "Stage IV" ~ "late",
+                                                                      pathologic_stage_label == "Stage IVA" ~ "late",
+                                                                      pathologic_stage_label == "Stage IVB" ~ "late"))%>%
+                                                        select(...1,case_uuid,condition)
+
+metadata_COAD <- rbind(metadata_StIandII,metadata_StIIIandIV)
+Metadada_COAD <- metadata_COAD %>% select(-...1)
+
+bac_early <- metadata_COAD %>% select(...1,case_uuid)
+
+# Bacterias sin normalizar
+kraken_TCGA_matched2SHOGUN_Novirus <- kraken_TCGA_matched2SHOGUN %>% select(- contains("Viroid"))
+namecolums <- colnames(kraken_TCGA_matched2SHOGUN_Novirus)
+grep(pattern = "Viroid",x = namecolums) # 0 viroids   
+
+Bacteria_countdata <- dplyr::left_join(x = bac_early,
+                                       y = kraken_TCGA_matched2SHOGUN_Novirus,
+                                       by = c("...1" = "...1"))%>% select(-...1)%>% 
+                                   t()%>% row_to_names(row_number = 1)
+
+Bacteria_countdata.1 <- t(sapply(Bacteria_countdata, as.numeric))
+
+# La matriz de Bacteria_countdata de hace de caracteres necesito hacerla numérica
+# Solución
+
+write.csv(Metadada_COAD,file = "metadata_uuid.csv",row.names = FALSE)
+write.csv(Bacteria_countdata,file = "Countdata_Bacteria.csv")
+
+Countdata_uuid_COAD <- read.csv(file = "Countdata_Bacteria.csv",row.names = 1)%>%as.matrix()
+Metadata_uuid_COAD <- read.csv(file = "metadata_uuid.csv", row.names = 1)
+
+#Ahora si aplicamos el paquete DESeq2
+library(DESeq2)
+
+Countdata_uuid_COAD = Countdata_uuid_COAD[rowSums(Countdata_uuid_COAD)>1,] 
+
+dds = DESeqDataSetFromMatrix(countData = Countdata_uuid_COAD,
+                             colData = Metadata_uuid_COAD,
+                             design =~condition)
+dds = DESeq(dds)
+
+res = results(dds, contrast = c("condition","early","late"))
+res = res[order(res$pvalue),]
+summary(res)
+
+head(res,10)
