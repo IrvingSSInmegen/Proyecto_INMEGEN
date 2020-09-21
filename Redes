@@ -1,0 +1,39 @@
+##########################
+#######            #######
+######    GRÁFICAS    ##################
+#######            #######
+##########################
+library(igraph)
+
+# Gráficas analizadas con python
+# Early
+G_early = read.graph(file = "early_analyzed.graphml",format = c("graphml"))
+vertex_attr_names(G_early)
+V(G_early)
+list_attr_early <- get.data.frame(G_early,what = c("vertices"))
+# Quitar nodos de grado cero
+aislados_early = which(degree(G_early) == 0)
+G2_early = delete.vertices(G_early,aislados_early)
+nodos_nonulos_early <- get.data.frame(G2_early,what = c("vertices"))
+
+write.graph(G2_early,file = "early_analyzed_positive.gml",format = "gml")
+
+#Late
+G_late = read.graph(file = "late_analyzed.graphml",format = c("graphml"))
+vertex_attr_names(G_late)
+V(G_late)
+list_attr_late <- get.data.frame(G_late,what = c("vertices"))
+# Quitar nodos de grado cero
+aislados_late = which(degree(G_late) == 0)
+G2_late = delete.vertices(G_late,aislados_late)
+nodos_nonulos_late <- get.data.frame(G2_late,what = c("vertices"))
+
+write.graph(G2_late,file = "late_analized_positive.gml",format = "gml")
+
+
+
+G_early = read_graph(file = "early.graphml",format = c("graphml"))
+vertex_attr_names(G_early)
+V(G_early)
+nodos <- get.data.frame(G_early,what = c("vertices"))
+
